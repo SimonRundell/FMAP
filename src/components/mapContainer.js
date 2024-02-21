@@ -31,7 +31,7 @@ const MapComponent = ({ lat, lng, radiusInMiles }) => {
 
 
   return (
-    <LoadScriptNext googleMapsApiKey={getConfig('REACT_APP_FMAP_API_URL')}>
+    <LoadScriptNext googleMapsApiKey={getConfig('CM_API_URL')}>
       <GoogleMap
         mapContainerStyle={containerStyle}
         center={center}

@@ -9,6 +9,13 @@ import MyAvailability from "./components/available";
 import MyDetails from "./components/detailsSummary";
 import SearchScreen from "./components/search";
 import { getConfig } from './components/config';
+import CMFloatAd from "./components/cmFloatAd";
+import { Layout } from 'antd';
+import DropdownMenu from "./components/navbar";
+import DebugInfo from "./components/debug";
+import CryptoJS from 'crypto-js';
+
+const { Content } = Layout;
 
 function getCookie(name) {
   let cookies = document.cookie.split(';');
@@ -36,6 +43,8 @@ function App() {
   const [currentActivity, setCurrentActivity] = useState("LOGIN");
   const [userHash, setUserHash] = useState("");
   const [profileData, setProfileData] = useState(null);
+  const [decrypted, setDecrypted] = useState('');
+  const [queryParams, setQueryParams] = useState({});
 
   useEffect(() => {
     const storedUserHash = getCookie("userHash");
@@ -43,206 +52,218 @@ function App() {
       setUserHash(storedUserHash);
       setCurrentActivity("SORTED");
     }
+  }, [userHash]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const queryParams = {};
+    params.forEach((value, key) => {
+      queryParams[key] = value;
+    });
+    setQueryParams(queryParams);
+    console.log("Passed Values:\n"+ JSON.stringify(queryParams));
+    if (queryParams['a']==='cp') {
+      setCurrentActivity("PASSWORDRESETAUTHCOMPLETE");
+      setUserHash(decryptMessage(decodeURIComponent(queryParams['user'])));
+
+      // console.log("password reset requested for " + decryptMessage(decodeURIComponent(queryParams['user'])));
+    }
+
+
   }, []);
 
-  if (currentActivity==="SORTED" || currentActivity==="MYDETAILS" || currentActivity==="MYPROFILE"  || currentActivity==="MYAVAILABILITY") {
+  useEffect(() => {
+        if (currentActivity==="SORTED" || currentActivity==="MYDETAILS" || currentActivity==="MYPROFILE"  || currentActivity==="MYAVAILABILITY") {
 
-    var jsonData = {
-      action: 'getProfile',
-      userHash: userHash
-    };
+          var jsonData = {
+            action: 'getProfile',
+            userHash: userHash
+        };
+        // console.log("getProfile sending:\n" + JSON.stringify(jsonData));
+        fetch(getConfig('CM_NODE') + '/getProfile', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(jsonData),
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'SUCCESS') {
+                setProfileData(data.message[0]);
+            } else {
+                console.log('Failed to fetch data from DetailsSummary:', data);
+            }
+        })
+        .catch(error => {
+            console.log('Error fetching data from Details Summary:', error);
+        });
 
-    console.log(jsonData);
-    
-      fetch(getConfig('REACT_APP_FMAP_API_URL'), {
-          method: 'POST',
-          headers: {
-              'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(jsonData),
-      })
-      .then(response => response.json())
-      .then(data => {
-          if (data.status === 'SUCCESS') {
-              const messageObject = JSON.parse(data.message);
-              setProfileData(messageObject); // Update state with parsed profile data
-          } else {
-              console.log('Failed to fetch data during App.getProfile:', data);
-          }
-      })
-      .catch(error => {
-          console.log('Error fetching data during App.getProfile:', error);
-      });
+}}, [userHash, currentActivity]);
 
-    };
+const decryptMessage = (encrypted) => {
+  const secretKey = getConfig('CM_SECRET'); // Use the same key used for encryption
+  const decryptedBytes = CryptoJS.AES.decrypt(encrypted, secretKey);
+  const decryptedText = decryptedBytes.toString(CryptoJS.enc.Utf8);
+  return decryptedText;
+};
 
-  const handleLogOut = () => {
-    setCurrentActivity("LOGIN");
-    setUserHash("");
-    setCookie("userHash", "", 1);
-  };
+  const onMenuChoice = (value) => {
 
-  const handleMyProfile = () => {
-    setCurrentActivity("MYPROFILE");
+    if (value === 0 && currentActivity !== "LOGIN") {
+      setUserHash(getCookie("userHash"));
+      setCurrentActivity("SORTED");
+    }
 
-  };
+    if (value === 1 && currentActivity !== "LOGIN") {
+      setUserHash(getCookie("userHash"));
+      setCurrentActivity("MYPROFILE");
+    }
 
-  const handleMyAvailability = () => {
-    setCurrentActivity("MYAVAILABILITY");
+    if (value === 2 && currentActivity !== "LOGIN") {
+      setUserHash(getCookie("userHash"));
+      setCurrentActivity("MYAVAILABILITY");
+    }
 
-  };
+    if (value === 4 && currentActivity !== "LOGIN") {
+      setUserHash(getCookie("userHash"));
+      setCurrentActivity("SEARCH");
+    }      
 
-  const handleMyDetails = () => {
-    setCurrentActivity("SORTED");
-  };
-
-  const handleFindAPriest = () => {
-    setCurrentActivity("SEARCH");
-  };
+    if (value === 7) {
+      setCurrentActivity("LOGIN");
+      setUserHash("");
+      setCookie("userHash", "", 1);
+    }
+}
 
   return (
+    <>
     <div>
       <header className="title-bar">
-        <h1 className="app-title">Find Me a Priest!</h1>
-        {(currentActivity === "REGISTER" || currentActivity === "FORGOTPASSWORD") && (
-        <>
-        <button id="logOut" className="custom-antd-button-menu" onClick={handleLogOut}>
-            Back to front page
-          </button>
-        </>
-        )}
-         {(currentActivity === "SORTED"  || currentActivity === "MYPROFILE" || currentActivity==="SEARCH" || currentActivity === "MYAVAILABILITY") && (
-        <>
-          <button id="logOut" className="custom-antd-button-menu" onClick={handleLogOut}>
-            Log Out
-          </button>
-          <button id="myProfile" className="custom-antd-button-menu" onClick={handleMyProfile}>
-            Edit my Profile
-          </button>
-          <button id="myAvailability" className="custom-antd-button-menu" onClick={handleMyAvailability}>
-            Edit my Availability
-          </button>
-          <button id="myHomePage" className="custom-antd-button-menu" onClick={handleMyDetails}>
-            My Details
-          </button>
-          <button id="findapriest" className="custom-antd-button-menu" onClick={handleFindAPriest}>
-            Find a Priest
-          </button>
-          </>
-        )}
+        <h1 className="app-title">Find Me a Priest!</h1>       
         <img
-          src="../assets/codemonkey-small.png"
+          src="../assets/FMAP.png"
           alt="CodeMonkey Design Ltd"
           className="logo"
         />
       </header>
-      <div id="opInfo">
-        <span id="currentActivity">
-          {currentActivity} &nbsp; {userHash}
-        </span>
-      </div>
+      <DebugInfo
+          userHash={userHash}
+          currentActivity={currentActivity}
+          profileData={profileData}
+      />
       <div className="clerical-collar"></div>
-      {currentActivity === "LOGIN" && (
-        <Login
-          currentActivity={currentActivity}
-          setCurrentActivity={setCurrentActivity}
-          setUserHash={setUserHash}
-          loginPrompt="User Login"
-        ></Login>
-      )} 
-      {currentActivity === "LOGINAFTERFORGOTFAIL" && (
-        <Login
-          currentActivity={currentActivity}
-          setCurrentActivity={setCurrentActivity}
-          setUserHash={setUserHash}
-          loginPrompt="That wasn't a proper eMail"
-        ></Login>
-      )}
-      {currentActivity === "REGISTER" && (
-        <Register
-          currentActivity={currentActivity}
-          setCurrentActivity={setCurrentActivity}
-        ></Register>
-      )}
-     {currentActivity === "FORGOTPASSWORD" && (
-        <ForgotPassword
-          currentActivity={currentActivity}
-          setCurrentActivity={setCurrentActivity}
-          setUserHash={setUserHash}
-        ></ForgotPassword>
-      )}
-      {currentActivity === "AWAITINGAUTH" && (
-        <div className="login-box">
-          <div>
-            We have sent you an email to confirm your details. Please check your
-            inbox
-          </div>
-        </div>
-      )}
-      
-      {currentActivity === "PASSWORDRESETAUTHCOMPLETE" && (
-        <ChangePassword
-          currentActivity={currentActivity}
-          setCurrentActivity={setCurrentActivity}
-          setUserHash={setUserHash}
-        >
-        </ChangePassword>
-      )}
+      <Layout>
+        <Content>
+        <DropdownMenu onMenuChoice={onMenuChoice}/>
+          {currentActivity === "SORTED" && (
+              <>
+              <div className="myprofile-container">
+              <MyDetails
+                    userHash={userHash}
+                    currentActivity={currentActivity}
+                    profileData={profileData}
+                  />          
+              </div>
 
-    {currentActivity === "MYPROFILE" && (
-        <>
-        <div className="myprofile-container">
-            <MyProfile
-              userHash={userHash}
+              </>
+          )}
+
+          {currentActivity === "LOGIN" && (
+            <Login
               currentActivity={currentActivity}
               setCurrentActivity={setCurrentActivity}
-              profileData={profileData}
-            ></MyProfile>
-        </div>
-        </>
-      
-      )}
+              setUserHash={setUserHash}
+              loginPromptText="User Login"
+            ></Login>
+          )} 
 
-{currentActivity === "MYAVAILABILITY" && (
-        <>
-        <div className="myprofile-container">
-            <MyAvailability
-
-              userHash={userHash}
+          {currentActivity === "LOGINAFTERFORGOTFAIL" && (
+            <Login
               currentActivity={currentActivity}
               setCurrentActivity={setCurrentActivity}
-              profileData={profileData}
-            ></MyAvailability>
-        </div>
-        </>
-      
-      )}
-
-{currentActivity === "SORTED" && (
-        <>
-        <div className="myprofile-container">
-        <MyDetails
-              userHash={userHash}
+              setUserHash={setUserHash}
+              loginPromptText="That wasn't a proper eMail"
+            ></Login>
+          )}
+          
+          {currentActivity === "REGISTER" && (
+            <Register
               currentActivity={currentActivity}
-              profileData={profileData}
+              setCurrentActivity={setCurrentActivity}
+            ></Register>
+          )}
+
+        {currentActivity === "FORGOTPASSWORD" && (
+            <ForgotPassword
+              currentActivity={currentActivity}
+              setCurrentActivity={setCurrentActivity}
+              setUserHash={setUserHash}
+            ></ForgotPassword>
+          )}
+
+          {currentActivity === "AWAITINGAUTH" && (
+            <div className="login-box" style={{ width: 300 }}>
+              <div>
+                We have sent you an email to confirm your details. Please check your
+                inbox
+              </div>
+            </div>
+          )}
+      
+          {currentActivity === "PASSWORDRESETAUTHCOMPLETE" && (
+            <ChangePassword
+              currentActivity={currentActivity}
+              setCurrentActivity={setCurrentActivity}
+              setUserHash={setUserHash}
             >
-        </MyDetails>
-            
-        </div>
-        </>
-      
-      )}
+            </ChangePassword>
+          )}
 
-{currentActivity === "SEARCH" && (
-        <>
-        <div className="myprofile-container">
-        <SearchScreen
-        />
-        </div>
-        </>
-      
-)}
-    </div>
+        {currentActivity === "MYPROFILE" && (
+            <>
+            <div className="myprofile-container">
+                <MyProfile
+                  userHash={userHash}
+                  currentActivity={currentActivity}
+                  setCurrentActivity={setCurrentActivity}
+                  profileData={profileData}
+                ></MyProfile>
+            </div>
+            </>
+          )}
+
+          {currentActivity === "MYAVAILABILITY" && (
+                  <>
+                  <div className="myprofile-container">
+                      <MyAvailability
+                        userHash={userHash}
+                        currentActivity={currentActivity}
+                        setCurrentActivity={setCurrentActivity}
+                        profileData={profileData}
+                      ></MyAvailability>
+                  </div>
+                  </>
+                
+                )}
+
+                {currentActivity === "SEARCH" && (
+                        <>
+                        <div className="myprofile-container">
+                        <SearchScreen
+                        />
+                        </div>
+                        </>
+                      
+                )}
+        </Content>
+      </Layout>
+  </div>
+
+    <CMFloatAd />
+    </>
+    
   );
 }
 

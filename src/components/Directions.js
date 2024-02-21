@@ -25,14 +25,10 @@ const Directions = (props) => {
   const startPostcode=props.startPostcode;
   const endPostcode=props.endPostcode;
 
-  const REACT_APP_GOOGLE_API_KEY = getConfig('REACT_APP_GOOGLE_API_KEY');
- // KEY=FMAP_MAP
-
-
-  console.log("Directions using API Key: " + REACT_APP_GOOGLE_API_KEY + "\nStartPostcode: " + startPostcode + "\nEndPostcode: " + endPostcode);
+  // console.log("Directions using API Key: " + getConfig('CM_GOOGLE_API_KEY') + "\nStartPostcode: " + startPostcode + "\nEndPostcode: " + endPostcode);
 
  const { isLoaded } = useJsApiLoader({
-    googleMapsApiKey: REACT_APP_GOOGLE_API_KEY 
+    googleMapsApiKey: getConfig('CM_GOOGLE_API_KEY') 
   });
 
   const [directions, setDirections] = useState(null);

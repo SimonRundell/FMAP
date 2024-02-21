@@ -3,15 +3,9 @@ let config = null;
 
 export const loadConfig = async () => {
 
-        // DEV
-        // fetch('http://localhost:3000/config_dev.json')
-        // LIVE
-        // fetch('/home/dh_8y5iqp/config.json')
-
-        //config = JSON.parse(response);
-
             try {
-              const response = await fetch('http://localhost:3000/config_dev.json');
+             const response = await fetch('/.config/config.json');
+              
               if (!response.ok) {
                 throw new Error('Network response was not ok');
               }

@@ -1,34 +1,27 @@
-import React, {useState, useEffect} from 'react';
+import React, { useState, useEffect } from 'react';
 import { getConfig } from './config';
+import GetAvatar from './getAvatar';
 
-function sortDates(dates) {
-    return dates.sort((a, b) => {
-        // Convert 'dd/mm/yyyy' to 'mm/dd/yyyy'
-        const dateA = a.split('/').reverse().join('-');
-        const dateB = b.split('/').reverse().join('-');
-
-        // Convert to Date objects
-        const newDateA = new Date(dateA);
-        const newDateB = new Date(dateB);
-
-        // Compare
-        return newDateA - newDateB;
-    });
+function formatDDMMYYYY(dateString) {
+    const date = new Date(dateString);
+    const day = date.getUTCDate().toString().padStart(2, '0');
+    const month = (date.getUTCMonth() + 1).toString().padStart(2, '0');
+    const year = date.getUTCFullYear();
+    return `${day}/${month}/${year}`;
 }
 
 function DetailsSummary(props) {
-    const [userHash] = useState(props.userHash);
-    const [profileData, setProfileData] = useState(null); 
+    const [profileData, setProfileData] = useState(props.profileData);
+    const [listAvailability, setListAvailability] = useState([]);
+    const [userHash, setUserHash] = useState(props.userHash);
 
     useEffect(() => {
         var jsonData = {
             action: 'getProfile',
             userHash: userHash
         };
-
-        
-
-        fetch(getConfig('REACT_APP_FMAP_API_URL'), {
+        // console.log("getProfile sending:\n" + JSON.stringify(jsonData));
+        fetch(getConfig('CM_NODE') + '/getProfile', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -38,8 +31,7 @@ function DetailsSummary(props) {
         .then(response => response.json())
         .then(data => {
             if (data.status === 'SUCCESS') {
-                const messageObject = JSON.parse(data.message);
-                setProfileData(messageObject); // Update state with parsed profile data
+                setProfileData(data.message[0]);
             } else {
                 console.log('Failed to fetch data from DetailsSummary:', data);
             }
@@ -47,41 +39,49 @@ function DetailsSummary(props) {
         .catch(error => {
             console.log('Error fetching data from Details Summary:', error);
         });
+    }, [userHash]); // Fetch profile data
+
+    useEffect(() => {
+        
+        var jsonData = {
+            action: 'getAvailability',
+            userHash: userHash
+        };
+        fetch(getConfig('CM_NODE') + '/getAvailability', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(jsonData),
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'SUCCESS') {
+                setListAvailability(data.message);
+            } else {
+                console.log('Failed to fetch data from getAvailability:', data);
+            }
+        })
+        .catch(error => {
+            console.log('Error fetching data from getAvailability:', error);
+        });
     }, [userHash]);
 
-    const ListAvailability = () => {
-
-            let datesAvailable = profileData.userAvailability.split(',');
-            datesAvailable = datesAvailable.map(date => 
-                date
-                .trim() // Remove whitespace
-                .replace(/^"|"$/g, '') // Remove quotes at the start and end
-            );
-            datesAvailable=sortDates(datesAvailable);
-            return (
-                datesAvailable.map((element) => (
-                <div>{element}</div>
-            )));
-    }; // listAvailability
-
-    return (
+return (
         <>
-            {profileData && (
-                <>
+        { profileData && (
                 <div className='profileDialog'>
-                        <div className="profile-container">
-                            <div className="profile-container-column">
-
-                                <div className="profile-horizontal-split">
-                                    {/* Left Section for Textual Information */}
+                <div className="summary-container-title">My Details</div>
+                        <div className="summary-container">
                                     <div className="profile-text-section">
                                         <div className="summary-container">
-                                            <div className="summary-label">Name:&nbsp;&nbsp;&nbsp;</div>
+                                        <div className='summary-details-card'>
+                                            <div className="summary-label">Name:</div>
                                             <div className="summary-details">
                                                 <div>{profileData.profileTitle.replace(/\[.*?\]/g, '')} {profileData.profileFirstName} {profileData.profileSurname}</div>
                                             </div>
                                         </div>
-                                        <div className="summary-container">
+                                            <div className='summary-details-card'>
                                             <div className="summary-label">Address:</div>
                                             <div className="summary-details">
                                                 <div>{profileData.profileAddress1}</div>
@@ -90,29 +90,25 @@ function DetailsSummary(props) {
                                                 <div>{profileData.profileAddress4}</div>
                                                 <div>{profileData.profilePostcode}</div>
                                             </div>
+                                            </div>
+                                                <div className="summary-label">My Portrait:</div>
+                                                <div className="profile-image-section">
+                                                    <GetAvatar userID={profileData.userID} />
+                                            </div></div>
+                                            <div className='summary-details-card'>
+                                            <div className="summary-label">Availability:</div>
+                                            <div>
+                                                {listAvailability.map((element) => (
+                                                    <span key={element.availableDate}>{formatDDMMYYYY(element.availableDate)} </span>
+                                                ))}
+                                            </div>
+                                            </div>
                                         </div>
                                     </div>
-                                    
-                                        { profileData.profileAvatar && (
-                                        <div className="profile-image-section">
-                                            <img src={profileData.profileAvatar} alt="Profile Avatar" className="profile-avatar-image" />
-                                        </div>
-                                    )}
-                                </div>
-
-                            </div>
-
-                            <div className="profile-container-column">
-                                Availability
-                                <div>&nbsp;</div>
-                                <ListAvailability />
-                            </div>
-                        </div>    
-                    </div>
-
+                        </div> 
+                 
+                 )}
                 </>
-            )} 
-        </>
     );
 }
 

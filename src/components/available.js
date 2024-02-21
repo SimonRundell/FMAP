@@ -1,27 +1,26 @@
-import React, {useState} from 'react';
+import React, {useState, useEffect} from 'react';
 import { DatePicker, notification, Tag } from 'antd';
+import { LoadingOutlined } from '@ant-design/icons';
 import { getConfig } from './config';
 
-function sortDates(dates) {
-    return dates.sort((a, b) => {
-        // Convert 'dd/mm/yyyy' to 'mm/dd/yyyy'
-        const dateA = a.split('/').reverse().join('-');
-        const dateB = b.split('/').reverse().join('-');
+function formatDDMMYYYY(dateString) {
 
-        // Convert to Date objects
-        const newDateA = new Date(dateA);
-        const newDateB = new Date(dateB);
+    const date = new Date(dateString);
 
-        // Compare
-        return newDateA - newDateB;
-    });
+    const day = date.getUTCDate().toString().padStart(2, '0');
+    const month = (date.getUTCMonth() + 1).toString().padStart(2, '0'); // getUTCMonth() returns month from 0 to 11
+    const year = date.getUTCFullYear();
+
+    // Format the date as dd/mm/yyyy
+    return `${day}/${month}/${year}`;
 }
 
 function MyAvailability (props) {
 
     const [userHash] = useState(props.userHash);
-    const [profileData] = useState(props.profileData);
     const [api, contextHolder] = notification.useNotification();
+    const [userAvailability, setUserAvailability] = useState([]);
+    const [isLoadingAvailability, setIsLoadingAvailability] = useState(false);
   
     const openNotification = () => {
     api.open({
@@ -31,69 +30,89 @@ function MyAvailability (props) {
     });
   };
 
-    const [dateList, setDateList] = useState(JSON.parse(profileData.userAvailability));
-    // const [dateList, setDateList] = useState('');
+  useEffect(() => {
+  var jsonData = {
+    action: 'getAvailability',
+    userHash: userHash
+};
 
-    let currentDateList=dateList;
+setIsLoadingAvailability(true);
 
-    const TagRender = (props) => {
-        const { label, closable, onClose } = props;
-    
-        const onPreventMouseDown = (event) => {
-            event.preventDefault();
-            event.stopPropagation();
-        };
-    
-        let tagList = label.split(',');
-        tagList = sortDates(tagList);
-    
-        return tagList.map((element, index) => (
-            <Tag
-                key={index}
-                color="grey"
-                onMouseDown={onPreventMouseDown}
-                closable={closable}
-                onClose={() => onClose(element)}
-                style={{ marginRight: 3 }}
-            >
-                {element}
-            </Tag>
-        ));
+fetch(getConfig('CM_NODE') + '/getAvailability', {
+    method: 'POST',
+    headers: {
+        'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(jsonData),
+})
+.then(response => response.json())
+.then(data => {
+    if (data.status === 'SUCCESS') {
+        console.log("Returned from fmap_available:\n" + JSON.stringify(data.message));
+        setUserAvailability(data.message);
+      
+    } else {
+        console.log('Failed to fetch data from getAvailability:', data);
+    }
+})
+.catch(error => {
+    console.log('Error fetching data from getAvailability:', error);
+})
+.finally(() => {
+    setIsLoadingAvailability(false);
+});
+
+}, [userHash]);
+
+const TagRender = (props) => {
+    const { label, closable, onClose } = props;
+
+    const onPreventMouseDown = (event) => {
+        event.preventDefault();
+        event.stopPropagation();
     };
+
+    return label.map((element, index) => (
+        <Tag
+            key={index}
+            color="grey"
+            onMouseDown={onPreventMouseDown}
+            closable={closable}
+            onClose={() => onClose(element)}
+            style={{ marginRight: 3 }}
+        >
+            {formatDDMMYYYY(element.availableDate)}
+        </Tag>
+    ));
+};
+
     
     const handleTagClose = (closedTag) => {
-        const newDateList = currentDateList.split(',')
-                           .filter(tag => tag !== closedTag)
-                           .join(',');
-        setDateList(newDateList);
+        const newDateList = userAvailability.filter(tag => tag !== closedTag);
+        setUserAvailability(newDateList);
     };
-
-    const upDateDateList=(date, dateString) => {
-        
-        if (currentDateList.length!==0) {
-            currentDateList=currentDateList + ','
-        }
-
-        currentDateList=currentDateList + dateString;
-
-        setDateList(currentDateList);
     
-    }
+    const upDateDateList = (date, dateString) => {
+        const parts = dateString.split('/');
+        const isoDateString = `${parts[2]}-${parts[1]}-${parts[0]}`;
+    
+        console.log("Date selected:\n" + isoDateString + "T00:00:00.000Z");
+    
+        setUserAvailability(prevDates => [...prevDates, { availableDate: isoDateString + "T00:00:00.000Z" }]);
+    };
+    
 
     const handleSubmitAvailability = () => {
-        // validate data
-    
-        // proceed to insert into database
+
         var jsonData = {
             action: 'updateAvailability',
             userHash: userHash,
-            userAvailability: JSON.stringify(dateList)
+            userAvailability: JSON.stringify(userAvailability),
         };
     
         console.log(JSON.stringify(jsonData));
-       
-
-        fetch(getConfig('REACT_APP_FMAP_API_URL'), {
+                
+        fetch(getConfig('CM_NODE') + '/updateAvailability', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -121,11 +140,17 @@ return (
                 click on the 'x' next to the date.</label>
                 <div style={{ marginTop: 10 }}><DatePicker id="imAvailable" onChange={upDateDateList} format={'DD/MM/YYYY'} /></div>
                 <div style={{ marginTop: 10, marginBottom: 5 }}>List of available dates</div>
-                <div><TagRender
-                    label={currentDateList}
+                <div>
+                {isLoadingAvailability && (
+                    <div className="wait-image">Getting your list of available dates...<LoadingOutlined /></div>
+                )}
+                    { userAvailability && (
+                    <TagRender
+                    label={userAvailability}
                     closable
                     onClose={handleTagClose}
                     />
+                    )}
                 </div>
             <button
                     className='custom-antd-button'

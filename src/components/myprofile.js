@@ -5,22 +5,12 @@ import { DownOutlined } from '@ant-design/icons';
 import Avatar from './avatar';
 import { getConfig } from './config';
 
-// function getCookie(name) {
-//     let cookies = document.cookie.split(';');
-//     for(let i = 0; i < cookies.length; i++) {
-//         let cookie = cookies[i];
-//         let parts = cookie.split('=');
-//         if (parts[0].trim() === name) {
-//             return parts[1];
-//         }
-//     }
-//     return "";
-//   }
-
 function MyProfile (props) {
 
     const [userHash] = useState(props.userHash);
     const [profileData] = useState(props.profileData);
+
+    // console.log(profileData);
     
     const [profileTitle, setProfileTitle] = useState(profileData.profileTitle);
     const [profileFirstName, setProfileFirstName] = useState(profileData.profileFirstName);
@@ -168,24 +158,24 @@ function MyProfile (props) {
                         { value: 'Limerick and Killaloe' },
                         { value: 'Meath and Kildare' }];
 
-                        const tagRender = (props) => {
-                            const { label, closable, onClose } = props;
-                            const onPreventMouseDown = (event) => {
-                              event.preventDefault();
-                              event.stopPropagation();
-                            };
-        return (
-          <Tag
-            color="grey"
-            onMouseDown={onPreventMouseDown}
-            closable={closable}
-            onClose={onClose}
-            style={{ marginRight: 3 }}
-          >
-            {label}
-          </Tag>
-        );
-      };
+    const tagRender = (props) => {
+        const { label, closable, onClose } = props;
+        const onPreventMouseDown = (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+             };
+    return (
+                <Tag
+                    color="grey"
+                    onMouseDown={onPreventMouseDown}
+                    closable={closable}
+                    onClose={onClose}
+                    style={{ marginRight: 3 }}
+                >
+                {label}
+                </Tag>
+            );
+    };
 
     const handleTitleClick = (event) => {
         setProfileTitle(event.key);
@@ -285,7 +275,6 @@ function MyProfile (props) {
             <Menu onClick={handleOrdainedByClick}>
                 <Menu.Item default key="A Male Bishop">A Male Bishop</Menu.Item>
                 <Menu.Item key="A Female Bishop">A Female Bishop</Menu.Item>
-
             </Menu>
         );
         
@@ -322,7 +311,7 @@ function MyProfile (props) {
             console.log(JSON.stringify(jsonData));
             
                     
-            fetch(getConfig('REACT_APP_FMAP_API_URL'), {
+            fetch(getConfig('CM_NODE') + '/updateProfile', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -343,19 +332,18 @@ function MyProfile (props) {
         }; // handleSubmitProfile
         
 return (
-    <div>
+    <>
         
         <div className="profileDialog">
-             <div className="profile-container-title">My Profile - {profileTitle.replace(/\[.*?\]/g, '')} {profileFirstName} {profileSurname}
-            </div>
+             <div className="summary-container-title">My Profile - {profileTitle.replace(/\[.*?\]/g, '')} {profileFirstName} {profileSurname}</div>
                 <div className="profile-container">
-                <div className="profile-container-column">
+                
                     <div>
                     <Dropdown 
                         overlay={profileTitleMenu}
                         trigger="hover"
                     >
-                        <a href="" className="profile-label" onClick={e => e.preventDefault()}>
+                         <a href="https://codemonkey.design" onClick={(e) => e.preventDefault()}>
                         I like to be referred to as:
                         <DownOutlined />
                         </a>
@@ -445,7 +433,7 @@ return (
                         />
                         <div>&nbsp;</div>
                        
-                            <div className='profile-container-column'>
+                            
                                 <label className="profile-label" >Fee for Service</label>
                                     <div>
                                         <InputNumber
@@ -454,13 +442,13 @@ return (
                                         addonBefore="£"
                                         onChange={handleFeeChange}
                                         variant="filled"
-                                        controlWidth={5}
+                                        controlwidth={5}
                                         max={45}
                                         min={0}
                                     />
                                     </div>
                             </div>
-                            <div className='profile-container-column'>
+                            
                                     <label className="profile-label" >Travel</label>
                                     <div>
                                         <InputNumber
@@ -469,20 +457,19 @@ return (
                                         addonAfter="p per mile"
                                         onChange={handleTravelChange}
                                         variant="filled"
-                                        controlWidth={5}
+                                        controlwidth={5}
                                         min={0}
                                     />
                                     </div>
-                                    </div>
-                            
-                    </div>
-                </div>
-                <div className="profile-container-column">
+        
+                
+                
                 <label className="profile-label">My Picture</label>
-                <Avatar profileAvatar={profileAvatar} 
-                        onProfileAvatarChange={handleProfileAvatarChange} 
-                />
-            
+                <div>
+                    <Avatar profileAvatar={profileAvatar} 
+                            onProfileAvatarChange={handleProfileAvatarChange} 
+                    />
+                </div>           
                     <div>&nbsp;</div>
                     <div className="shaded-background">
                     <div className="shaded-title">Some Parishes would value the following information:</div>
@@ -490,7 +477,7 @@ return (
                         overlay={profileGenderMenu}
                         trigger="hover"
                     >
-                        <a href="#" className="profile-label" onClick={e => e.preventDefault()}>
+                        <a href="https://codemonkey.design" onClick={(e) => e.preventDefault()}>
                         Gender
                         <DownOutlined />
                         </a>
@@ -500,7 +487,7 @@ return (
                         overlay={profileOrdainedByMenu}
                         trigger="hover"
                     >
-                        <a href="#" className="profile-label" onClick={e => e.preventDefault()}>
+                        <a href="https://codemonkey.design" onClick={(e) => e.preventDefault()}>
                         I was ordained by
                         <DownOutlined />
                         </a>
@@ -546,7 +533,7 @@ return (
                         onChange={setProfileWorship}
                     />
                     <div><label className="profile-label">Radius of Availability</label></div>
-                    <div className='profile-container'>
+                    
                     <div className='profile-container-column-noborder'>
                         <Slider 
                             defaultValue={5}
@@ -567,18 +554,21 @@ return (
                             variant="filled"
                         />
                     </div>
-                    </div>
-                </div>
-                </div> 
+                    
+            
+                
                 <button
                 className='custom-antd-button'
                 onClick={() => handleSubmitProfile()}
             >
             Update my Profile
             </button>
-        </div>
+    
         {contextHolder}
         </div>
+    
+    </div>
+    </>
 )
 
 }

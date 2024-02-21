@@ -1,15 +1,9 @@
 import React, { useState } from 'react';
 import { DatePicker, Input, Modal, Popover, Select, Tag, Slider, InputNumber } from 'antd';
+import { LoadingOutlined } from '@ant-design/icons';
 import FormatSummary from './formatSummary';
 import Directions from './Directions';
 import { getConfig } from './config';
-
-
-function getRandomColor() {
-    const colors = ["#2db7f5", "#87d068", "#108ee9", "#f50", 'black', 'grey'];
-    const randomIndex = Math.floor(Math.random() * colors.length);
-    return colors[randomIndex];
-}
 
 function convertToDDMMYYYY(timestamp) {
     var date = new Date(timestamp);
@@ -19,6 +13,15 @@ function convertToDDMMYYYY(timestamp) {
     
     return day + '/' + month + '/' + year;
 }
+
+function convertTimestampToDateString(timestamp) {
+    const date = new Date(timestamp);
+    const year = date.getFullYear();
+    const month = (date.getMonth() + 1).toString().padStart(2, '0'); // Months are 0-indexed, add 1 to get the correct month
+    const day = date.getDate().toString().padStart(2, '0') + "T00:00:00.000Z";
+  
+    return `${year}-${month}-${day}`;
+  }
 
 function SearchScreen(props) {
 
@@ -115,7 +118,7 @@ const searchTraditionOptions = [
             };
 return (
                 <Tag
-                color={getRandomColor()}
+                color="grey"
                 onMouseDown={onPreventMouseDown}
                 closable={closable}
                 onClose={onClose}
@@ -131,7 +134,8 @@ return (
 const handleButtonClick = () => {
 
 let goodToGo = true;
-setSearchData([])
+setSearchData([]);
+setSelectedPriestPostcode('');
 
     if (inputPostcode.length<6) {
         goodToGo=false;
@@ -145,11 +149,16 @@ setSearchData([])
 
 if (goodToGo) {
 
+    const dSearch = convertTimestampToDateString(dateSearch);
+
+    console.log("Date Search:\n" + dSearch);
+
+    const start = performance.now();
 
             setIsLoadingSearch(true);
             var jsonData = {
                 action: 'searchProfile',
-                dateRequired: dateSearch,
+                dateRequired: dSearch,
                 worshipRequired: JSON.stringify(searchWorship),
                 traditionRequired: JSON.stringify(searchTradition),
                 searchRadius: searchRadius,
@@ -159,7 +168,7 @@ if (goodToGo) {
             console.log(jsonData);
 
 
-            fetch(getConfig('REACT_APP_FMAP_API_URL'), {
+            fetch(getConfig('CM_NODE') + '/search', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -169,8 +178,10 @@ if (goodToGo) {
             .then(response => response.json())
             .then(data => {
                 if (data.status === 'SUCCESS') {
-                    const messageObject = JSON.parse(data.message);
-                    setSearchData(messageObject); // Update state with parsed profile data
+                    const end = performance.now();
+                    console.log(`Fetch took ${end - start} milliseconds`);
+                    const messageObject = data.message;
+                    setSearchData(messageObject);
                     setMatchesFound(messageObject.length);
                 } else {
                     console.log('Failed to fetch data during searchProfile:', data);
@@ -228,9 +239,9 @@ return (
         <p>Date Required is not set</p>
       </Modal>
     <div className="profileDialog">
-        <div className="profile-container-title">Find a Priest!</div>
+        <div className="summary-container-title">Find a Priest!</div>
         <div className="profile-container">
-            <div className="profile-container-column">
+            
                 <div className="searchDialog">
                     <div>Date Required<sup>*</sup>: <DatePicker id="searchDate" onChange={handleDateSearch} format={'DD/MM/YYYY'} /></div>
                 </div>
@@ -257,24 +268,7 @@ return (
                 onChange={setSearchWorship}
             />
             </div>
-
-                <button className="custom-antd-button" onClick={handleButtonClick}>Search</button>
-                {isLoadingSearch && (
-                    <div className="wait-image">Calculating matches and distances... this may take a few moments<img src="./assets/wait.gif" alt="Loading..." /></div>
-                )}
-                {searchData && (
-                    <>
-                        <div>Search results - Found {matchesFound} results</div>
-                        <div className="search-border">
-                            <RenderSearchResults
-                                inputPostcode={inputPostcode}
-                                searchData={searchData} />
-                        </div>
-                    </>
-                )}
-            </div>
-
-            <div className="profile-container-column">
+            
                 <div>Postcode of Church<sup>*</sup>: 
                     <Input
                         size="small"
@@ -286,7 +280,7 @@ return (
                     <label className="profile-label">Search Radius</label>
                 </div>
                 <div className='profile-container'>
-                    <div className='profile-container-column-noborder'>
+                
                         <Slider 
                             defaultValue={5}
                             min={5}
@@ -296,16 +290,34 @@ return (
                             onChange={handleSearchRadius}
                             variant="filled"
                         />
-                    </div>
-                    <div className='profile-container-column-noborder'>
+                    
+                    
                         <InputNumber
                             value={searchRadius}
                             onChange={handleSearchRadius}
                             addonAfter="miles from postcode"
                             variant="filled"
                         />
-                    </div>
+                    
                 </div>
+
+                <button className="custom-antd-button" onClick={handleButtonClick}>Search</button>
+                {isLoadingSearch && (
+                    <div className="wait-image">Calculating matches and distances... this may take a few moments <LoadingOutlined /></div>
+                )}
+                {searchData && (
+                    <>
+                        <div>Search results - Found {matchesFound} results</div>
+                        <div className="search-border">
+                            <RenderSearchResults
+                                inputPostcode={inputPostcode}
+                                searchData={searchData} />
+                        </div>
+                    </>
+                )}
+            
+
+            
                     { selectedPriestPostcode && (
                         <>
                         <div><Directions
@@ -324,7 +336,7 @@ return (
                         </>
                     )
                     }
-            </div>
+            
         </div>
     </div>
 </>

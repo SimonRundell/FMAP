@@ -6,10 +6,10 @@ logs
 **/*.back.*
 
 /node_modules
-/src/config.json
-/public/config_dev.json
-/api/vendor
-/vendor
+/build
+/public/.config
+
+
 
 
 
