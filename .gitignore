@@ -42,3 +42,13 @@ package-lock.json
 
 # Build artifacts
 *.tgz
+
+# Large database files
+*.sql
+client/setup/*.sql
+setup/*.sql
+
+# Large binary files
+*.exe
+*.msi
+*.dmg
